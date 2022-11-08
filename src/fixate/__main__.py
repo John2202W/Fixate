@@ -223,7 +223,7 @@ class FixateSupervisor:
 
 
 class FixateWorker:
-    def __init__(self, sequencer, test_script_path, args):
+    def __init__(self, sequencer: fixate.sequencer.Sequencer, test_script_path, args):
         self.sequencer = sequencer
         self.test_script_path = test_script_path
         self.args = args
@@ -301,10 +301,8 @@ class FixateWorker:
                         "{tpl_time_stamp}-{index}.csv"
                     ]
                 except (AttributeError, KeyError):
-                    pass
+                    logger.error("Failed to set local log path")
             register_csv()
-            self.sequencer.status = "Running"
-
             self.sequencer.run_sequence()
             if not self.sequencer.non_interactive:
                 user_ok("Finished testing")
