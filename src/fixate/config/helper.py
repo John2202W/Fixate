@@ -77,7 +77,9 @@ class _UnseenFormatter(Formatter):
             return Formatter.get_value(key, args, kwargs)
 
 
-def render_template(_template: Union[str, list, tuple], *args, **kwargs) -> Union[str, List[str]]:
+def render_template(
+    _template: Union[str, list, tuple], *args, **kwargs
+) -> Union[str, List[str]]:
     """
     :param template: Template string, or iterable of strings
     :param kwargs:

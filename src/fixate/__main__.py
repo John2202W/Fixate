@@ -298,7 +298,7 @@ class FixateWorker:
             if self.args.local_log:
                 try:
                     fixate.config.plg_csv["tpl_csv_path"] = [
-                        "{tpl_time_stamp}-{index}.csv"
+                        "{start_date_time}-{index}.csv"
                     ]
                 except (AttributeError, KeyError):
                     logger.error("Failed to set local log path")

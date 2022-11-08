@@ -86,18 +86,21 @@ Test End
 """
 import csv
 import datetime
-import sys
-import os
-import time
+import logging
 import re
+import sys
+import time
+from pathlib import Path
+from queue import Queue
 
 from pubsub import pub
 
-from queue import Queue
-from fixate.core.common import TestClass
-from fixate.core.common import ExcThread
 import fixate
 import fixate.config
+from fixate.core.common import ExcThread, TestClass
+from fixate.core.ui import user_info_important
+
+logger = logging.getLogger(__name__)
 
 
 class TestClassImp(TestClass):
@@ -114,10 +117,6 @@ class CSVWriter:
     def __init__(self):
         self.csv_queue = Queue()
         self.csv_writer = None
-        # data = fixate.config.get_config_dict()
-        # data.update(fixate.config.get_plugin_data('plg_csv'))
-        # self.csv_dir = os.path.join(*fixate.config.render_template(data["tpl_csv_path"], **data,
-        #                                                            **fixate.config.RESOURCES["SEQUENCER"].context_data))
         self.reporting = CsvReporting()
 
     def install(self):
@@ -138,12 +137,15 @@ class CSVWriter:
             if line is None:
                 break  # Command send to close csv_writer
             try:
-                os.makedirs(os.path.dirname(self.reporting.csv_path))
-            except OSError as e:
-                pass
-            with open(self.reporting.csv_path, "a+", newline="") as f:
-                writer = csv.writer(f, quoting=csv.QUOTE_MINIMAL)
-                writer.writerow(line)
+                with self.reporting.csv_path.open(mode="a+", newline="") as f:
+                    writer = csv.writer(f, quoting=csv.QUOTE_MINIMAL)
+                    writer.writerow(line)
+            # except (FileNotFoundError, PermissionError) as e:
+            except Exception as e:
+                logger.exception(f"Failed CSV write to: {self.reporting.csv_path}")
+                # TODO publish a "Reporting Exception??" that the sequencer monitors?
+                user_info_important("Logging has failed")
+                break  # break to prevent further attempts
 
 
 class CsvReporting:
@@ -151,7 +153,7 @@ class CsvReporting:
         self.exception_in_test = False
         self.failed = False
         self.chk_cnt = 0
-        self.csv_path = ""
+        self.csv_path: Path = None
         self.test_module = None
         self.start_time = None
         self.current_test = None
@@ -160,7 +162,9 @@ class CsvReporting:
 
     def sequence_update(self, status):
         # Do Start Sequence Reporting
-        if status in ["Running"]:
+        # This is called whenever the sequencer state transitions
+        # We want to catch everytime a new sequence starts running
+        if status == "Running":
             sequencer = fixate.config.RESOURCES["SEQUENCER"]
             self.data.update(sequencer.context_data)
             # Create new csv path
@@ -169,21 +173,21 @@ class CsvReporting:
             )
             self.test_module = sys.modules["module.loaded_tests"]
             if fixate.config.log_file:
-                self.csv_path = fixate.config.log_file
+                logger.debug(f"Using CLI specified log path: {fixate.config.log_file}")
+                self.csv_path = Path(fixate.config.log_file)
             else:
-                self.csv_path = os.path.join(
+                self.csv_path = Path(
                     *fixate.config.render_template(
                         self.data["tpl_csv_path"], **self.data, self=self
                     )
                 )
+            # Create directory for csv
+            self.create_report_dir()
             self.data["fixate_version"] = fixate.__version__
             # Add dev if installed in editable mode
             if "site-packages" not in __file__:
                 self.data["fixate_version"] += "dev"
-            self.data["test_script_name"] = os.path.basename(
-                self.test_module.__file__
-            ).split(".")[0]
-            self.data.update(sequencer.context_data)
+            self.data["test_script_name"] = Path(self.test_module.__file__).stem
             self.start_time = time.perf_counter()
             self._write_line_to_csv(
                 fixate.config.render_template(
@@ -348,13 +352,21 @@ class CsvReporting:
         """
         global writer
         writer.csv_queue.put(line)
-        # try:
-        #     os.makedirs(self.csv_dir)
-        # except OSError:
-        #     pass
-        # with open(self.csv_path, 'a+', newline='') as f:
-        #     writer = csv.writer(f, quoting=csv.QUOTE_MINIMAL)
-        #     writer.writerow(line)
+
+    def create_report_dir(self):
+        """
+        Creates directory for csv report to be written, defaulting to
+        cwd if invalid file path or permission denied
+        """
+        try:
+            logger.debug(f"Creating CSV directory: {self.csv_path.parent}")
+            self.csv_path.parent.mkdir(parents=True, exist_ok=True)
+        except (FileNotFoundError, PermissionError) as e:
+            logger.error(f"Failed to create logging directory: {self.csv_path}.")
+            logger.debug(f"Defaulting to cwd: {self.csv_path.name}")
+            # Default to cwd, should check that the file name is valid?
+            # Also may not have permission?
+            self.csv_path = Path.cwd() / self.csv_path.name
 
 
 writer = None
