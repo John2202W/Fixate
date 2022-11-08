@@ -1,8 +1,10 @@
-import ruamel.yaml
 import pathlib
-import fixate.config
-import os
 from string import Formatter
+from typing import List, Union
+
+import ruamel.yaml
+
+import fixate.config
 
 
 def load_dict_config(in_dict: dict, config_name: str = "") -> None:
@@ -40,11 +42,11 @@ def load_yaml_config(yaml_in: str) -> None:
      >>> print(fixate.config.HI)
      "WORLD"
     """
-    if not os.path.exists(yaml_in):
-        raise FileNotFoundError("Config file {} not found".format(yaml_in))
+    yaml_path = pathlib.Path(yaml_in)
+    if not yaml_path.exists():
+        raise FileNotFoundError(f"Config file {yaml_in} not found")
     yaml = ruamel.yaml.YAML(typ="safe", pure=True)
     yaml.default_flow_style = False
-    yaml_path = pathlib.Path(yaml_in)
     fixate.config.__dict__.update(yaml.load(yaml_path))
 
 
@@ -75,11 +77,11 @@ class _UnseenFormatter(Formatter):
             return Formatter.get_value(key, args, kwargs)
 
 
-def render_template(_template: [str, list, tuple], *args, **kwargs):
+def render_template(_template: Union[str, list, tuple], *args, **kwargs) -> Union[str, List[str]]:
     """
-    :param template: Template string or list
+    :param template: Template string, or iterable of strings
     :param kwargs:
-    :return:
+    :return: formatted string (or list of).
     """
     if isinstance(_template, str):
         return _render.format(*args, **kwargs)
