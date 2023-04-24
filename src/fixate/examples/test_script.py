@@ -1,11 +1,9 @@
 """
 This is a test script that shows basic use case for the fixate library
 """
-from fixate.core.common import TestClass, TestList
+from fixate.core.common import TestClass
 from fixate.core.checks import *
 from fixate.core.ui import *
-
-__version__ = "3"
 
 
 class RedButton(TestClass):
@@ -37,7 +35,6 @@ class ReturnFalse(TestClass):
     """
 
     test_desc = "Fail False"
-    skip_on_fail = True
 
     def test(self):
         chk_equal(False, True)
@@ -49,7 +46,6 @@ class RaiseValueError(TestClass):
     """
 
     test_desc = "Raise Value Error"
-    skip_exceptions = [ValueError]
 
     def test(self):
         raise ValueError("Things be broken")
@@ -60,8 +56,6 @@ class RaiseValueErrorInComparison(TestClass):
     Comparison Value Error <- If test_desc not present than this is the test_desc
     Raises a value error during a comparison <- If test_desc not present than this is the test_desc_long
     """
-
-    skip_exceptions = [TypeError]
 
     def test(self):
         chk_in_range("HI", 5, 10)
@@ -97,40 +91,6 @@ class MultiplePassedTestResults(TestClass):
         user_info("Tearing down this function")
 
 
-class MultipleTestResults(TestClass):
-    """
-    This class has multiple test results including passed, and failed in comparisons
-    """
-
-    test_desc = "Multiple testresults"
-    skip_on_fail = True
-
-    def test(self):
-        chk_in_range(1, 0, 2)
-        chk_in_range(1, 2, 3)
-        chk_equal(1, 1)
-        chk_equal(1, 2)
-        chk_in_range(5, 0, 10)
-
-
-class MultipleTestResultsTestException(TestClass):
-    """
-    This class has multiple test results including passed, failed and exceptions in comparisons
-    """
-
-    test_desc = "Multiple exception in main line test"
-    skip_exceptions = [ZeroDivisionError, TypeError]
-
-    def test(self):
-        chk_in_range(1, 0, 2)
-        chk_in_range(1, 2, 3)
-        chk_equal(1, 1)
-        chk_equal(1, 2)
-        chk_in_range("hi", 0, 10)
-        x = 1 / 0
-        chk_in_range(5, 0, 10)
-
-
 class ParameterisedTest(TestClass):
     """
     This class uses the init function to build a set of parameters used in the test function
@@ -154,27 +114,12 @@ class ParameterisedTest(TestClass):
         )
         chk_equal(self.class_param, "Class Param")
         chk_log_value(
-            "Frequency {}".format(self.frequency),
+            f"Frequency {self.frequency}",
             description="Just outputting the frequency",
         )
-        chk_log_value("Time {}".format(self.time))
+        chk_log_value(f"Time {self.time}")
         user_info("This won't be in the report")
         chk_passes("This will be in the report")
-
-
-class MultipleLeveled(TestClass):
-    """
-    This class also execute tests in the self.sub_tests
-    """
-
-    test_desc = "Multi Levelled Test Function"
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.sub_tests = [ReturnTrue(), ReturnFalse()]
-
-    def test(self):
-        user_info("Test")
 
 
 SHOULD_I_PASS = False
@@ -185,7 +130,6 @@ class PassEverySecondAttempt(TestClass):
     Only passes if the global is True
     """
 
-    retry_on_fail = True
     attempts = 5
 
     def test(self):
@@ -202,46 +146,10 @@ class PassEverySecondAttemptThrowOthers(PassEverySecondAttempt):
     Throws Exceptions other times
     """
 
-    retry_exceptions = [Exception]
-
     def test(self):
         chk_equal(SHOULD_I_PASS, True, description="Checking state of SHOULD_I_PASS")
         if not SHOULD_I_PASS:
             raise Exception("This should throw exception if SHOULD_I_PASS is False")
-
-
-class MultipleLeveledSubTestFails(TestClass):
-    """
-    This class also execute tests in the self.sub_tests
-    """
-
-    test_desc = "Multi Levelled Test Function with fail retries"
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.sub_tests = [PassEverySecondAttempt(), PassEverySecondAttemptThrowOthers()]
-
-    def test(self):
-        chk_passes()
-
-
-class MultipleLeveledSubTestFailsRetryOnTopLevel(TestClass):
-    """
-    This class also execute tests in the self.sub_tests
-    """
-
-    test_desc = "Multi Levelled Test Function with fail retries"
-    attempts = 3
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        mod = PassEverySecondAttemptThrowOthers()
-        self.retry_exceptions = mod.retry_exceptions
-        mod.retry_exceptions = []
-        self.sub_tests = [PassEverySecondAttempt(), mod]
-
-    def test(self):
-        chk_passes()
 
 
 class MultipleLineInstruction(TestClass):
@@ -283,36 +191,23 @@ PASSES = [
     PostSequenceInfo(),
     CheckPostSequenceInfo(),
     ReturnTrue(),
-    ReturnFalse(skip=True),
-    RaiseValueError(skip=True),
-    RaiseValueErrorInComparison(skip=True),
     RedButton(),
     GetUserInput(),
     MultiplePassedTestResults(),
-    MultipleTestResults(skip=True),
-    MultipleTestResultsTestException(skip=True),
     ReturnTrue(),
     ParameterisedTest(50, 500),
     ReturnTrue(),
     ParameterisedTest(10, 5),
+    PassEverySecondAttempt(),
+    PassEverySecondAttemptThrowOthers(),
     MultipleLineInstruction(),
     CheckPostSequenceInfo(),
 ]
 FAILS = [
     PostSequenceInfo(),
     CheckPostSequenceInfo(),
-    ReturnTrue(),
     ReturnFalse(),
-    RaiseValueError(skip=True),
-    RaiseValueErrorInComparison(skip=True),
-    RedButton(),
-    GetUserInput(),
-    MultiplePassedTestResults(),
-    MultipleTestResults(),
-    MultipleTestResultsTestException(skip=True),
-    ReturnTrue(),
     ParameterisedTest(50, 500),
-    ReturnTrue(),
     ParameterisedTest(10, 5),
     MultipleLineInstruction(),
     CheckPostSequenceInfo(),
@@ -320,18 +215,8 @@ FAILS = [
 ERRORS = [
     PostSequenceInfo(),
     CheckPostSequenceInfo(),
-    ReturnTrue(),
-    ReturnFalse(),
     RaiseValueError(),
     RaiseValueErrorInComparison(),
-    RedButton(),
-    GetUserInput(),
-    MultiplePassedTestResults(),
-    MultipleTestResults(),
-    MultipleTestResultsTestException(),
-    ReturnTrue(),
-    ParameterisedTest(50, 500),
-    ReturnTrue(),
     ParameterisedTest(10, 5),
     MultipleLineInstruction(),
     CheckPostSequenceInfo(),
@@ -339,4 +224,4 @@ ERRORS = [
 
 TEST_SEQUENCE = PASSES
 
-test_data = {"default": PASSES, "passes": PASSES, "fails": FAILS, "ERRORS": ERRORS}
+test_data = {"default": PASSES, "passes": PASSES, "fails": FAILS, "errors": ERRORS}

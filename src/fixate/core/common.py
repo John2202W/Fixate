@@ -408,20 +408,18 @@ class TestClass:
     as the name of the test with the remaining lines stored as self.test_desc_long which will show in the test logs
     """
 
+    # NOT USED - delete after cleanup up from test scripts >>
     RT_ABORT = 1  # Abort the whole test sequence
     RT_RETRY = 2  # Automatically retry up to "attempts"
     RT_PROMPT = 3  # Prompt the user; Options are Abort the sequence, retry, or fail and continue
     RT_FAIL = 4  # Automatically fail and move on
+    # <<
 
     test_desc = None
     test_desc_long = None
     attempts = 1
-    tests = []
-    retry_type = RT_PROMPT
-    retry_exceptions = [BaseException]  # Depreciated
-    skip_exceptions = []
+    retry_type = RT_PROMPT  # not used - need to delete from test scripts
     abort_exceptions = [KeyboardInterrupt, AttributeError, NameError]
-    skip_on_fail = False
 
     def __init__(self, skip=False):
         self.skip = skip
